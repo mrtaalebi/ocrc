@@ -6,6 +6,7 @@ host="vpn.host.info"
 
 etc_dir=/etc/ocrc
 oc_out="$etc_dir/oc.out"
+ping_out="$etc_dir/ping.out"
 sudo mkdir -p $etc_dir
 
 ping_host=google.com
@@ -17,14 +18,16 @@ connect() {
 	[ $(grep 'Failed' $oc_out | wc -l | awk '{print $1}') -gt 0 ] || \
 		! [ $(grep 'Connected as' $oc_out | wc -l | awk '{print $1}') -gt 0 ] && \
 		reconnect "y"
-	connected_as=$(grep 'Connected as' $oc_out --color=never | cut -d, -f1)
-	echo -ne "\t$connected_as\r"
+	connected_as=$(grep 'Connected as' $oc_out --color=never | cut -d',' -f1)
+	tput clear
+	tput cup 3 5; echo "$connected_as"
 	while true; do
-		ping_out=$(ping -w $ping_deadline $ping_host 2> /dev/null)
-		[ $(echo $ping_out | grep -i '\(not\)\|\(resolved\)\|\(known\)' | wc -l ) -gt 0 ] && \
+		timeout $ping_deadline ping $ping_host &> $ping_out
+		[ $(grep -i '\(not\)\|\(resolved\)\|\(known\)' $ping_out | wc -l ) -gt 0 ] || \
+			[ $(wc -l $ping_out | awk '{print $1}') -le 1 ] && \
 			reconnect "y"
-		avg_ping=$(echo $ping_out | rev | cut -d= -f1 | rev | cut -d/ -f2 | cut -d. -f1)
-		echo -ne "\t$connected_as\tping $ping_host ${avg_ping}ms\r"
+		avg_ping=$(grep 'time=' $ping_out | rev | cut -d'=' -f1 | rev | cut -d'm' -f1 | awk '{sum+=$1; n++} END {print sum/n}' | cut -d'.' -f1)
+		tput cup 5 5; echo "ping $ping_host ${avg_ping}ms"
 	done
 }
 
