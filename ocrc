@@ -1,0 +1,48 @@
+#!/bin/bash
+
+username="username"
+password="password"
+host="vpn.host.info"
+
+etc_dir=/etc/ocrc
+oc_out="$etc_dir/oc.out"
+sudo mkdir -p $etc_dir
+
+ping_host=google.com
+ping_deadline=10
+
+connect() {
+	echo > $oc_out
+	echo $password | sudo openconnect -b -u $username $host --no-dtls &> $oc_out
+	[ $(grep 'Failed' $oc_out | wc -l | awk '{print $1}') -gt 0 ] || \
+		! [ $(grep 'Connected as' $oc_out | wc -l | awk '{print $1}') -gt 0 ] && \
+		reconnect "y"
+	connected_as=$(grep 'Connected as' $oc_out --color=never | cut -d, -f1)
+	echo -ne "\t$connected_as\r"
+	while true; do
+		ping_out=$(ping -w $ping_deadline $ping_host)
+		[ $(echo $ping_out | grep -i '\(not\)\|\(resolved\)\|\(known\)' | wc -l ) -gt 5 ] && \
+			reconnect "y"
+		avg_ping=$(echo $ping_out | rev | cut -d= -f1 | rev | cut -d/ -f2 | cut -d. -f1)
+		echo -ne "\t$connected_as\tping $ping_host ${avg_ping}ms\r"
+	done
+}
+
+disconnect() {
+	sudo pkill -SIGINT openconnect
+}
+
+reconnect() {
+	disconnect
+	sleep 1
+	if [ -z $1 ]; then echo; read -p "RECONNECT? [Y/n]: " comm;
+	else comm="$1"; fi
+	case $comm in
+		[nN]* ) exit ;;
+		* ) connect ;;
+	esac
+}
+
+trap reconnect SIGINT
+connect
+
