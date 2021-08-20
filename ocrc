@@ -21,7 +21,7 @@ connect() {
 	echo -ne "\t$connected_as\r"
 	while true; do
 		ping_out=$(ping -w $ping_deadline $ping_host 2> /dev/null)
-		[ $(echo $ping_out | grep -i '\(not\)\|\(resolved\)\|\(known\)' | wc -l ) -gt 5 ] && \
+		[ $(echo $ping_out | grep -i '\(not\)\|\(resolved\)\|\(known\)' | wc -l ) -gt 0 ] && \
 			reconnect "y"
 		avg_ping=$(echo $ping_out | rev | cut -d= -f1 | rev | cut -d/ -f2 | cut -d. -f1)
 		echo -ne "\t$connected_as\tping $ping_host ${avg_ping}ms\r"
