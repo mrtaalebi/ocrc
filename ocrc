@@ -27,7 +27,7 @@ connect() {
 			[ $(wc -l $ping_out | awk '{print $1}') -le 1 ] && \
 			reconnect "y"
 		avg_ping=$(grep 'time=' $ping_out | rev | cut -d'=' -f1 | rev | cut -d'm' -f1 | awk '{sum+=$1; n++} END {print sum/n}' | cut -d'.' -f1)
-		tput cup 5 5; echo "ping $ping_host ${avg_ping}ms"
+		tput clear; tput cup 5 5; echo "ping $ping_host ${avg_ping}ms"
 	done
 }
 
